@@ -23,7 +23,7 @@ Needs macOS 13+.
 open build/striptape.app
 ```
 
-Everything here is local. No tracking, no electron bloat, just native Swift.
+Everything here is local.
 
 ---
 
