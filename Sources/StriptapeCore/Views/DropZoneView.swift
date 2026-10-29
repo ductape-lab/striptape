@@ -6,11 +6,11 @@ struct DropZoneView: View {
     @State private var isTargeted: Bool = false
 
     var body: some View {
-        VStack(spacing: 12) {
+        VStack(spacing: 10) {
             // Main Drop Target Box
             ZStack {
-                // Background card
-                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                // Background card with crisper, less round corners
+                RoundedRectangle(cornerRadius: 7, style: .continuous)
                     .fill(
                         LinearGradient(
                             colors: isTargeted
@@ -21,101 +21,101 @@ struct DropZoneView: View {
                         )
                     )
                     .overlay(
-                        RoundedRectangle(cornerRadius: 14, style: .continuous)
+                        RoundedRectangle(cornerRadius: 7, style: .continuous)
                             .strokeBorder(
                                 isTargeted
                                     ? AnyShapeStyle(Color.accentColor.opacity(0.8))
                                     : AnyShapeStyle(
                                         LinearGradient(
-                                            colors: [Color.primary.opacity(0.15), Color.primary.opacity(0.06)],
+                                            colors: [Color.primary.opacity(0.14), Color.primary.opacity(0.05)],
                                             startPoint: .top,
                                             endPoint: .bottom
                                         )
                                     ),
-                                style: StrokeStyle(lineWidth: isTargeted ? 2 : 1, dash: isTargeted ? [6, 4] : [])
+                                style: StrokeStyle(lineWidth: isTargeted ? 1.5 : 1, dash: isTargeted ? [5, 3] : [])
                             )
                     )
 
-                VStack(spacing: 9) {
-                    // Central Icon Circle
+                VStack(spacing: 8) {
+                    // Central Icon
                     ZStack {
-                        Circle()
+                        RoundedRectangle(cornerRadius: 6, style: .continuous)
                             .fill(
                                 isTargeted
-                                    ? Color.accentColor.opacity(0.25)
-                                    : Color.primary.opacity(0.06)
+                                    ? Color.accentColor.opacity(0.2)
+                                    : Color.primary.opacity(0.05)
                             )
-                            .frame(width: 44, height: 44)
+                            .frame(width: 36, height: 36)
 
                         Image(systemName: isTargeted ? "arrow.down" : "bandage.fill")
-                            .font(.system(size: 18, weight: .semibold))
-                            .foregroundColor(isTargeted ? .accentColor : .primary.opacity(0.85))
-                            .scaleEffect(isTargeted ? 1.2 : 1.0)
+                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundColor(isTargeted ? .accentColor : .primary.opacity(0.8))
+                            .scaleEffect(isTargeted ? 1.15 : 1.0)
                             .animation(.spring(response: 0.3, dampingFraction: 0.6), value: isTargeted)
                     }
 
                     // Main Text
                     Text(isTargeted ? "Drop image to strip" : "Drag image here")
-                        .font(.system(size: 13, weight: .semibold))
+                        .font(.system(size: 12.5, weight: .semibold))
                         .foregroundColor(.primary)
 
                     // Keyboard Shortcut Hint
                     HStack(spacing: 4) {
                         Text("or press")
-                            .font(.system(size: 11))
+                            .font(.system(size: 10.5))
                             .foregroundColor(.secondary)
 
                         KeyCapView(key: "⌘")
                         KeyCapView(key: "V")
 
                         Text("to paste")
-                            .font(.system(size: 11))
+                            .font(.system(size: 10.5))
                             .foregroundColor(.secondary)
                     }
 
                     // Supported Formats Pills
-                    HStack(spacing: 5) {
+                    HStack(spacing: 4) {
                         FormatTag("WEBP")
                         FormatTag("AVIF")
                         FormatTag("HEIC")
                         FormatTag("EXIF")
                         Image(systemName: "arrow.right")
-                            .font(.system(size: 8, weight: .bold))
+                            .font(.system(size: 7.5, weight: .bold))
                             .foregroundColor(.secondary.opacity(0.7))
                         FormatTag("PNG/JPG", isOutput: true)
                     }
                     .padding(.top, 2)
                 }
-                .padding(.vertical, 16)
-                .padding(.horizontal, 14)
+                .padding(.vertical, 14)
+                .padding(.horizontal, 12)
             }
-            .frame(height: 145)
+            .frame(height: 140)
             .onDrop(of: [.fileURL, .image, .data], isTargeted: $isTargeted) { providers in
                 handleDrop(providers: providers)
             }
 
-            // Quick Paste Pill Button
+            // Quick Paste Button with crisp corners
             Button(action: {
                 appState.processFromClipboard()
             }) {
-                HStack(spacing: 7) {
+                HStack(spacing: 6) {
                     Image(systemName: "doc.on.clipboard")
-                        .font(.system(size: 12, weight: .semibold))
+                        .font(.system(size: 11, weight: .semibold))
                     Text("Paste from Clipboard")
-                        .font(.system(size: 12, weight: .semibold))
+                        .font(.system(size: 11.5, weight: .semibold))
                     Spacer()
                     HStack(spacing: 2) {
                         KeyCapView(key: "⌘")
                         KeyCapView(key: "V")
                     }
                 }
-                .padding(.horizontal, 12)
-                .padding(.vertical, 8)
+                .padding(.horizontal, 10)
+                .padding(.vertical, 7)
                 .background(
-                    RoundedRectangle(cornerRadius: 10, style: .continuous)
-                        .fill(Color.primary.opacity(0.06))
+                    RoundedRectangle(cornerRadius: 6, style: .continuous)
+                        .fill(Color.primary.opacity(0.05))
                         .overlay(
-                            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                            RoundedRectangle(cornerRadius: 6, style: .continuous)
                                 .stroke(Color.primary.opacity(0.1), lineWidth: 1)
                         )
                 )
@@ -161,13 +161,13 @@ struct KeyCapView: View {
         Text(key)
             .font(.system(size: 9, weight: .bold, design: .rounded))
             .foregroundColor(.primary.opacity(0.85))
-            .padding(.horizontal, 5)
-            .padding(.vertical, 2)
+            .padding(.horizontal, 4.5)
+            .padding(.vertical, 1.5)
             .background(
-                RoundedRectangle(cornerRadius: 4, style: .continuous)
+                RoundedRectangle(cornerRadius: 3, style: .continuous)
                     .fill(Color.primary.opacity(0.07))
                     .overlay(
-                        RoundedRectangle(cornerRadius: 4, style: .continuous)
+                        RoundedRectangle(cornerRadius: 3, style: .continuous)
                             .stroke(Color.primary.opacity(0.15), lineWidth: 0.5)
                     )
             )
@@ -185,12 +185,12 @@ struct FormatTag: View {
 
     var body: some View {
         Text(text)
-            .font(.system(size: 9, weight: .semibold, design: .monospaced))
-            .padding(.horizontal, 5)
-            .padding(.vertical, 2)
+            .font(.system(size: 8.5, weight: .semibold, design: .monospaced))
+            .padding(.horizontal, 4.5)
+            .padding(.vertical, 1.5)
             .background(
-                RoundedRectangle(cornerRadius: 4, style: .continuous)
-                    .fill(isOutput ? Color.green.opacity(0.12) : Color.primary.opacity(0.06))
+                RoundedRectangle(cornerRadius: 3, style: .continuous)
+                    .fill(isOutput ? Color.green.opacity(0.12) : Color.primary.opacity(0.05))
             )
             .foregroundColor(isOutput ? .green : .secondary)
     }

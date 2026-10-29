@@ -3,13 +3,23 @@ import SwiftUI
 import UniformTypeIdentifiers
 import StriptapeCore
 
+enum PopoverOpenMode {
+    case closed
+    case hover
+    case click
+}
+
 @MainActor
-final class StatusItemController: NSObject {
+final class StatusItemController: NSObject, NSPopoverDelegate {
     static let shared = StatusItemController()
 
     private var statusItem: NSStatusItem!
     private var popover: NSPopover!
     private var dropOverlayView: StatusDropView?
+
+    private(set) var openMode: PopoverOpenMode = .closed
+    private var hoverCheckTimer: Timer?
+    private var hoverExitDeadline: Date?
 
     func setup() {
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
@@ -18,6 +28,7 @@ final class StatusItemController: NSObject {
         popover.contentSize = NSSize(width: 320, height: 260)
         popover.behavior = .transient
         popover.animates = true
+        popover.delegate = self
         popover.contentViewController = NSHostingController(rootView: PopoverView(appState: AppState.shared))
 
         if let button = statusItem.button {
@@ -46,20 +57,30 @@ final class StatusItemController: NSObject {
         }
     }
 
-    @objc func statusBarButtonClicked(_ sender: NSStatusBarButton) {
-        togglePopover(sender: sender)
-    }
+    // MARK: - Hybrid Pop-up and Pop-out Actions
 
-    func togglePopover(sender: Any?) {
-        guard statusItem.button != nil else { return }
-        if popover.isShown {
-            popover.performClose(sender)
+    @objc func statusBarButtonClicked(_ sender: NSStatusBarButton) {
+        if openMode == .click {
+            // Clicked to pop out
+            closePopover()
         } else {
-            showPopover(sender: sender)
+            // Clicked to pop up (or upgrade from hover to clicked/pinned)
+            openMode = .click
+            stopHoverMonitoring()
+            showPopover()
         }
     }
 
-    func showPopover(sender: Any?) {
+    func handleStatusBarHover() {
+        guard AppState.shared.openOnHover else { return }
+        if openMode == .closed {
+            openMode = .hover
+            showPopover()
+            startHoverMonitoring()
+        }
+    }
+
+    func showPopover() {
         guard let button = statusItem.button else { return }
         if !popover.isShown {
             popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
@@ -67,9 +88,79 @@ final class StatusItemController: NSObject {
         }
     }
 
-    func hidePopover() {
+    func closePopover() {
+        stopHoverMonitoring()
+        openMode = .closed
         if popover.isShown {
             popover.performClose(nil)
+        }
+    }
+
+    // MARK: - Hover Monitoring for Pop-out on Hover-off
+
+    private func startHoverMonitoring() {
+        hoverCheckTimer?.invalidate()
+        hoverExitDeadline = nil
+        hoverCheckTimer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { [weak self] _ in
+            Task { @MainActor [weak self] in
+                self?.checkHoverStatus()
+            }
+        }
+    }
+
+    private func stopHoverMonitoring() {
+        hoverCheckTimer?.invalidate()
+        hoverCheckTimer = nil
+        hoverExitDeadline = nil
+    }
+
+    private func checkHoverStatus() {
+        guard openMode == .hover, popover.isShown else {
+            stopHoverMonitoring()
+            return
+        }
+
+        let mouseScreenLocation = NSEvent.mouseLocation
+
+        // 1. Check if mouse is over the menu bar status button (with generous padding for gap bridge)
+        var isOverButton = false
+        if let button = statusItem.button, let window = button.window {
+            let buttonRectInWindow = button.convert(button.bounds, to: nil)
+            let buttonScreenRect = window.convertToScreen(buttonRectInWindow)
+            if buttonScreenRect.insetBy(dx: -6, dy: -8).contains(mouseScreenLocation) {
+                isOverButton = true
+            }
+        }
+
+        // 2. Check if mouse is over the popover content window
+        var isOverPopover = false
+        if let popoverWindow = popover.contentViewController?.view.window {
+            let popoverScreenRect = popoverWindow.frame.insetBy(dx: -6, dy: -8)
+            if popoverScreenRect.contains(mouseScreenLocation) {
+                isOverPopover = true
+            }
+        }
+
+        if isOverButton || isOverPopover {
+            // Still hovering over the app
+            hoverExitDeadline = nil
+        } else {
+            // Hovered off!
+            if hoverExitDeadline == nil {
+                // Short 200ms grace period so rapid cross-border motion doesn't flicker
+                hoverExitDeadline = Date().addingTimeInterval(0.2)
+            } else if Date() >= hoverExitDeadline! {
+                closePopover()
+            }
+        }
+    }
+
+    // MARK: - NSPopoverDelegate
+
+    nonisolated func popoverDidClose(_ notification: Notification) {
+        Task { @MainActor in
+            self.openMode = .closed
+            self.stopHoverMonitoring()
         }
     }
 }
@@ -107,15 +198,12 @@ final class StatusDropView: NSView {
 
     override func mouseEntered(with event: NSEvent) {
         Task { @MainActor in
-            if AppState.shared.openOnHover {
-                controller?.showPopover(sender: self)
-            }
+            controller?.handleStatusBarHover()
         }
     }
 
     // Pass clicks down to parent NSStatusBarButton
     override func hitTest(_ point: NSPoint) -> NSView? {
-        // Allow clicks to go straight through to NSStatusBarButton for native highlight/click
         return nil
     }
 
@@ -139,7 +227,7 @@ final class StatusDropView: NSView {
         if let urls = pasteboard.readObjects(forClasses: [NSURL.self], options: nil) as? [URL], let url = urls.first {
             Task { @MainActor in
                 AppState.shared.processFile(at: url)
-                controller?.showPopover(sender: self)
+                controller?.showPopover()
             }
             return true
         }
@@ -147,7 +235,7 @@ final class StatusDropView: NSView {
         if let image = NSImage(pasteboard: pasteboard), let tiff = image.tiffRepresentation {
             Task { @MainActor in
                 AppState.shared.processData(tiff, filename: "dragged_image")
-                controller?.showPopover(sender: self)
+                controller?.showPopover()
             }
             return true
         }

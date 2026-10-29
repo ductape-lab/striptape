@@ -9,17 +9,17 @@ public struct PopoverView: View {
     }
 
     public var body: some View {
-        VStack(spacing: 12) {
+        VStack(spacing: 11) {
             // Header Bar
             HStack(alignment: .center) {
                 HStack(spacing: 7) {
                     Text("🩹")
-                        .font(.system(size: 16))
+                        .font(.system(size: 15))
 
                     VStack(alignment: .leading, spacing: 1) {
                         HStack(spacing: 5) {
                             Text("striptape")
-                                .font(.system(size: 13, weight: .bold, design: .rounded))
+                                .font(.system(size: 12.5, weight: .bold, design: .rounded))
                                 .foregroundColor(.primary)
 
                             Circle()
@@ -28,14 +28,14 @@ public struct PopoverView: View {
                         }
 
                         Text("metadata bloat cleaner")
-                            .font(.system(size: 9.5, weight: .medium))
+                            .font(.system(size: 9, weight: .medium))
                             .foregroundColor(.secondary)
                     }
                 }
 
                 Spacer()
 
-                HStack(spacing: 6) {
+                HStack(spacing: 5) {
                     // Settings Button
                     Button(action: {
                         withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
@@ -45,9 +45,9 @@ public struct PopoverView: View {
                         Image(systemName: showSettings ? "gearshape.fill" : "gearshape")
                             .font(.system(size: 11, weight: .medium))
                             .foregroundColor(showSettings ? .accentColor : .secondary)
-                            .frame(width: 24, height: 24)
+                            .frame(width: 22, height: 22)
                             .background(
-                                Circle()
+                                RoundedRectangle(cornerRadius: 4, style: .continuous)
                                     .fill(showSettings ? Color.accentColor.opacity(0.12) : Color.primary.opacity(0.05))
                             )
                     }
@@ -59,10 +59,13 @@ public struct PopoverView: View {
                         NSApplication.shared.terminate(nil)
                     }) {
                         Image(systemName: "xmark")
-                            .font(.system(size: 10, weight: .semibold))
+                            .font(.system(size: 9.5, weight: .semibold))
                             .foregroundColor(.secondary)
-                            .frame(width: 24, height: 24)
-                            .background(Circle().fill(Color.primary.opacity(0.05)))
+                            .frame(width: 22, height: 22)
+                            .background(
+                                RoundedRectangle(cornerRadius: 4, style: .continuous)
+                                    .fill(Color.primary.opacity(0.05))
+                            )
                     }
                     .buttonStyle(.plain)
                     .help("Quit striptape")
@@ -73,10 +76,10 @@ public struct PopoverView: View {
 
             // Settings Tray (collapsible)
             if showSettings {
-                VStack(alignment: .leading, spacing: 9) {
+                VStack(alignment: .leading, spacing: 8) {
                     HStack {
                         Text("Output Format")
-                            .font(.system(size: 11, weight: .medium))
+                            .font(.system(size: 10.5, weight: .medium))
                             .foregroundColor(.secondary)
                         Spacer()
                         Picker("", selection: $appState.targetFormatRaw) {
@@ -85,7 +88,7 @@ public struct PopoverView: View {
                             }
                         }
                         .pickerStyle(.segmented)
-                        .frame(width: 170)
+                        .frame(width: 165)
                     }
 
                     Divider()
@@ -93,28 +96,28 @@ public struct PopoverView: View {
 
                     Toggle(isOn: $appState.autoCopyToClipboard) {
                         Text("Auto-copy to clipboard after strip")
-                            .font(.system(size: 11))
+                            .font(.system(size: 10.5))
                     }
                     .toggleStyle(.checkbox)
 
                     Toggle(isOn: $appState.openOnHover) {
                         Text("Open menu when hovered in taskbar")
-                            .font(.system(size: 11))
+                            .font(.system(size: 10.5))
                     }
                     .toggleStyle(.checkbox)
 
                     Toggle(isOn: $appState.playSound) {
                         Text("Play audio feedback")
-                            .font(.system(size: 11))
+                            .font(.system(size: 10.5))
                     }
                     .toggleStyle(.checkbox)
                 }
-                .padding(12)
+                .padding(10)
                 .background(
-                    RoundedRectangle(cornerRadius: 11, style: .continuous)
+                    RoundedRectangle(cornerRadius: 6, style: .continuous)
                         .fill(Color.primary.opacity(0.04))
                         .overlay(
-                            RoundedRectangle(cornerRadius: 11, style: .continuous)
+                            RoundedRectangle(cornerRadius: 6, style: .continuous)
                                 .stroke(Color.primary.opacity(0.08), lineWidth: 1)
                         )
                 )
@@ -123,14 +126,14 @@ public struct PopoverView: View {
 
             // Main Content Area
             if appState.isProcessing {
-                VStack(spacing: 10) {
+                VStack(spacing: 9) {
                     ProgressView()
                         .scaleEffect(0.8)
                     Text("Stripping bloat & converting...")
-                        .font(.system(size: 11, weight: .medium))
+                        .font(.system(size: 10.5, weight: .medium))
                         .foregroundColor(.secondary)
                 }
-                .frame(height: 145)
+                .frame(height: 140)
             } else if let result = appState.currentResult {
                 ResultView(appState: appState, result: result)
             } else {
@@ -141,18 +144,19 @@ public struct PopoverView: View {
             if let toast = appState.toastMessage {
                 HStack(spacing: 5) {
                     Text(toast)
-                        .font(.system(size: 10.5, weight: .semibold))
+                        .font(.system(size: 10, weight: .semibold))
                         .foregroundColor(.primary)
                 }
-                .padding(.horizontal, 10)
-                .padding(.vertical, 4)
+                .padding(.horizontal, 9)
+                .padding(.vertical, 3.5)
                 .background(
-                    Capsule()
+                    RoundedRectangle(cornerRadius: 4, style: .continuous)
                         .fill(Color(NSColor.windowBackgroundColor))
                         .overlay(
-                            Capsule().stroke(Color.primary.opacity(0.12), lineWidth: 1)
+                            RoundedRectangle(cornerRadius: 4, style: .continuous)
+                                .stroke(Color.primary.opacity(0.12), lineWidth: 1)
                         )
-                        .shadow(color: Color.black.opacity(0.12), radius: 4, y: 2)
+                        .shadow(color: Color.black.opacity(0.1), radius: 3, y: 1.5)
                 )
                 .transition(.move(edge: .bottom).combined(with: .opacity))
                 .animation(.spring(response: 0.3, dampingFraction: 0.7), value: appState.toastMessage)
@@ -161,17 +165,17 @@ public struct PopoverView: View {
             // Error Message
             if let error = appState.errorMessage {
                 Text(error)
-                    .font(.system(size: 10.5))
+                    .font(.system(size: 10))
                     .foregroundColor(.red)
-                    .padding(8)
+                    .padding(7)
                     .frame(maxWidth: .infinity)
                     .background(
-                        RoundedRectangle(cornerRadius: 8, style: .continuous)
+                        RoundedRectangle(cornerRadius: 5, style: .continuous)
                             .fill(Color.red.opacity(0.1))
                     )
             }
         }
-        .padding(14)
-        .frame(width: 320)
+        .padding(13)
+        .frame(width: 310)
     }
 }
