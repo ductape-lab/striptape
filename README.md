@@ -14,10 +14,14 @@ This is a tiny menu bar app to solve that.
 
 That's it.
 
-### build & run
+### install
 
-Needs macOS 13+.
+Grab the ready-to-use app:  
+👉 **[Download striptape v1.0.0](https://github.com/ductape-lab/striptape/releases/latest/download/striptape.zip)**
 
+Unzip and drop `striptape.app` into your Applications folder.
+
+Or build it from source (macOS 13+):
 ```bash
 ./build_app.sh
 open build/striptape.app
