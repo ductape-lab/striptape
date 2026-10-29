@@ -57,3 +57,4 @@ fi
 
 echo "✅ Successfully built $APP_DIR"
 echo "👉 You can run it with: open $APP_DIR"
+
