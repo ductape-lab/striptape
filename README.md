@@ -26,10 +26,14 @@ Or download manually:
 
 Unzip and move `striptape.app` to your Applications folder.
 
-*(Note: because I don't give Apple \$99/year for a developer certificate, macOS Gatekeeper might block opening it the first time. Either **Right-click ➔ Open**, or run `xattr -cr /Applications/striptape.app` to clear the quarantine flag).*
+*(Note: because I don't give Apple \$99/year for a developer certificate, macOS Gatekeeper will block opening prebuilt downloads by default. You can run `xattr -cr /Applications/striptape.app` in Terminal to clear the quarantine flag, but honestly building it from source just makes more sense: it takes 5 seconds, ad-hoc signs locally on your Mac, and bypasses Gatekeeper entirely).*
 
-Or build it from source (macOS 13+):
+### build from source (macOS 13+)
+
+Building it locally is recommended:
 ```bash
+git clone https://github.com/ductape-lab/striptape.git
+cd striptape
 ./build_app.sh
 open build/striptape.app
 ```
