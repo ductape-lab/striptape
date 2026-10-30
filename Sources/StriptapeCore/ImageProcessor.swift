@@ -51,6 +51,13 @@ public enum TargetFormat: String, CaseIterable, Identifiable, Sendable {
 public final class ImageProcessor: Sendable {
     public static let shared = ImageProcessor()
 
+    private static let filenameDateFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.dateFormat = "yyyy-MM-dd_HH.mm.ss"
+        return formatter
+    }()
+
     public init() {}
 
     public func process(data: Data, originalFilename: String? = nil, targetFormat: TargetFormat = .auto, jpegQuality: Double = 0.90) throws -> ProcessedImage {
@@ -58,18 +65,45 @@ public final class ImageProcessor: Sendable {
             throw NSError(domain: "striptape", code: 1, userInfo: [NSLocalizedDescriptionKey: "Could not decode image data"])
         }
 
-        guard let cgImage = CGImageSourceCreateImageAtIndex(source, 0, nil) else {
-            throw NSError(domain: "striptape", code: 2, userInfo: [NSLocalizedDescriptionKey: "Failed to extract image frame"])
+        let properties = CGImageSourceCopyPropertiesAtIndex(source, 0, nil) as? [CFString: Any]
+
+        // Extract orientation (1 = standard upright)
+        let orientation: Int = {
+            if let o = properties?[kCGImagePropertyOrientation] as? Int {
+                return o
+            }
+            if let tiff = properties?[kCGImagePropertyTIFFDictionary] as? [CFString: Any],
+               let o = tiff[kCGImagePropertyTIFFOrientation] as? Int {
+                return o
+            }
+            return 1
+        }()
+
+        // Decode image, baking in EXIF orientation transform if rotated/mirrored
+        let cgImage: CGImage
+        if orientation != 1, let rawImage = CGImageSourceCreateImageAtIndex(source, 0, nil) {
+            let maxDim = max(rawImage.width, rawImage.height)
+            let options: [CFString: Any] = [
+                kCGImageSourceCreateThumbnailFromImageAlways: true,
+                kCGImageSourceCreateThumbnailWithTransform: true,
+                kCGImageSourceThumbnailMaxPixelSize: maxDim
+            ]
+            cgImage = CGImageSourceCreateThumbnailAtIndex(source, 0, options as CFDictionary) ?? rawImage
+        } else {
+            guard let decoded = CGImageSourceCreateImageAtIndex(source, 0, nil) else {
+                throw NSError(domain: "striptape", code: 2, userInfo: [NSLocalizedDescriptionKey: "Failed to extract image frame"])
+            }
+            cgImage = decoded
         }
 
         let originalType = (CGImageSourceGetType(source) as String?) ?? "public.image"
         let originalFormatName = formatName(fromUTType: originalType, filename: originalFilename)
         
         // Count metadata tags accurately
-        var metadataCount = 0
+        var metadataCount = orientation != 1 ? 1 : 0
         var hadGPS = false
 
-        if let properties = CGImageSourceCopyPropertiesAtIndex(source, 0, nil) as? [CFString: Any] {
+        if let properties {
             // Check GPS
             if let gpsDict = properties[kCGImagePropertyGPSDictionary] as? [CFString: Any], !gpsDict.isEmpty {
                 hadGPS = true
@@ -158,7 +192,7 @@ public final class ImageProcessor: Sendable {
         }
 
         var destinationProperties: [CFString: Any] = [:]
-        if (destinationUTType as String) == (UTType.jpeg.identifier) {
+        if (destinationUTType as String) == UTType.jpeg.identifier {
             destinationProperties[kCGImageDestinationLossyCompressionQuality] = jpegQuality
         }
 
@@ -170,17 +204,13 @@ public final class ImageProcessor: Sendable {
         }
 
         let cleanData = outputData as Data
-        guard let nsImage = NSImage(data: cleanData) else {
-            throw NSError(domain: "striptape", code: 5, userInfo: [NSLocalizedDescriptionKey: "Failed to reconstruct image"])
-        }
+        let nsImage = NSImage(cgImage: cgImage, size: NSSize(width: width, height: height))
 
         let baseName: String
         if let original = originalFilename, !original.isEmpty {
             baseName = URL(fileURLWithPath: original).deletingPathExtension().lastPathComponent
         } else {
-            let formatter = DateFormatter()
-            formatter.dateFormat = "yyyy-MM-dd_HH.mm.ss"
-            baseName = "striptape_\(formatter.string(from: Date()))"
+            baseName = "striptape_\(Self.filenameDateFormatter.string(from: Date()))"
         }
         let cleanFilename = "\(baseName).\(resolvedTargetExt)"
 
@@ -201,7 +231,35 @@ public final class ImageProcessor: Sendable {
 
     private func checkHasAlpha(cgImage: CGImage) -> Bool {
         let alpha = cgImage.alphaInfo
-        return alpha == .first || alpha == .last || alpha == .premultipliedFirst || alpha == .premultipliedLast
+        let hasAlphaChannel = alpha == .first || alpha == .last || alpha == .premultipliedFirst || alpha == .premultipliedLast || alpha == .alphaOnly
+        guard hasAlphaChannel else { return false }
+
+        let width = cgImage.width
+        let height = cgImage.height
+        let bytesPerRow = width * 4
+        guard width > 0, height > 0,
+              let context = CGContext(
+                  data: nil,
+                  width: width,
+                  height: height,
+                  bitsPerComponent: 8,
+                  bytesPerRow: bytesPerRow,
+                  space: CGColorSpaceCreateDeviceRGB(),
+                  bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+              ),
+              let data = context.data else {
+            return true
+        }
+
+        context.draw(cgImage, in: CGRect(x: 0, y: 0, width: width, height: height))
+        let ptr = data.assumingMemoryBound(to: UInt8.self)
+        let totalBytes = bytesPerRow * height
+        for idx in stride(from: 3, to: totalBytes, by: 4) {
+            if ptr[idx] < 255 {
+                return true
+            }
+        }
+        return false
     }
 
     private func formatName(fromUTType uti: String, filename: String?) -> String {

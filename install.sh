@@ -14,7 +14,7 @@ curl -fL --progress-bar "$RELEASE_URL" -o "$ZIP_FILE"
 unzip -q -o "$ZIP_FILE" -d "$TMP_DIR"
 
 # Close any running instance
-pkill -f striptape 2>/dev/null || true
+pkill -x striptape 2>/dev/null || true
 
 # Move to Applications
 rm -rf /Applications/striptape.app
@@ -29,3 +29,4 @@ rm -rf "$TMP_DIR"
 echo "✅ Installed to /Applications/striptape.app"
 echo "🚀 Launching striptape..."
 open /Applications/striptape.app
+

@@ -2,22 +2,21 @@
 set -e
 
 echo "🩹 Building striptape for macOS (Release)..."
-swift build -c release
+swift build -c release --product striptape
 
 BIN_PATH="$(swift build -c release --show-bin-path)/striptape"
 APP_NAME="striptape.app"
 APP_DIR="./build/$APP_NAME"
 CONTENTS_DIR="$APP_DIR/Contents"
 MACOS_DIR="$CONTENTS_DIR/MacOS"
-RESOURCES_DIR="$CONTENTS_DIR/Resources"
 
 echo "📦 Assembling $APP_NAME bundle..."
 rm -rf "$APP_DIR"
 mkdir -p "$MACOS_DIR"
-mkdir -p "$RESOURCES_DIR"
 
-# Copy binary
+# Copy and strip binary
 cp "$BIN_PATH" "$MACOS_DIR/striptape"
+strip -x "$MACOS_DIR/striptape"
 
 # Create Info.plist
 cat <<EOF > "$CONTENTS_DIR/Info.plist"

@@ -9,55 +9,46 @@ struct DropZoneView: View {
         VStack(spacing: 10) {
             // Main Drop Target Box
             ZStack {
-                // Background card with crisper, less round corners
-                RoundedRectangle(cornerRadius: 7, style: .continuous)
+                // Background Surface
+                RoundedRectangle(cornerRadius: 8, style: .continuous)
                     .fill(
-                        LinearGradient(
-                            colors: isTargeted
-                                ? [Color.accentColor.opacity(0.18), Color.accentColor.opacity(0.06)]
-                                : [Color.primary.opacity(0.04), Color.primary.opacity(0.02)],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
+                        isTargeted
+                            ? Color.accentColor.opacity(0.12)
+                            : Color.primary.opacity(0.035)
                     )
                     .overlay(
-                        RoundedRectangle(cornerRadius: 7, style: .continuous)
+                        RoundedRectangle(cornerRadius: 8, style: .continuous)
                             .strokeBorder(
                                 isTargeted
-                                    ? AnyShapeStyle(Color.accentColor.opacity(0.8))
-                                    : AnyShapeStyle(
-                                        LinearGradient(
-                                            colors: [Color.primary.opacity(0.14), Color.primary.opacity(0.05)],
-                                            startPoint: .top,
-                                            endPoint: .bottom
-                                        )
-                                    ),
-                                style: StrokeStyle(lineWidth: isTargeted ? 1.5 : 1, dash: isTargeted ? [5, 3] : [])
+                                    ? Color.accentColor.opacity(0.85)
+                                    : Color.primary.opacity(0.1),
+                                style: StrokeStyle(
+                                    lineWidth: isTargeted ? 1.5 : 0.75,
+                                    dash: isTargeted ? [6, 4] : []
+                                )
                             )
                     )
 
                 VStack(spacing: 8) {
-                    // Central Icon
+                    // Central Icon Badge
                     ZStack {
-                        RoundedRectangle(cornerRadius: 6, style: .continuous)
+                        Circle()
                             .fill(
                                 isTargeted
                                     ? Color.accentColor.opacity(0.2)
-                                    : Color.primary.opacity(0.05)
+                                    : Color.primary.opacity(0.055)
                             )
-                            .frame(width: 36, height: 36)
+                            .frame(width: 38, height: 38)
 
-                        Image(systemName: isTargeted ? "arrow.down" : "bandage.fill")
-                            .font(.system(size: 16, weight: .semibold))
-                            .foregroundColor(isTargeted ? .accentColor : .primary.opacity(0.8))
-                            .scaleEffect(isTargeted ? 1.15 : 1.0)
-                            .animation(.spring(response: 0.3, dampingFraction: 0.6), value: isTargeted)
+                        Image(systemName: isTargeted ? "arrow.down.doc.fill" : "photo.badge.checkmark")
+                            .font(.system(size: 16, weight: .medium))
+                            .foregroundColor(isTargeted ? .accentColor : .primary.opacity(0.78))
                     }
 
-                    // Main Text
-                    Text(isTargeted ? "Drop image to strip" : "Drag image here")
+                    // Main Prompt
+                    Text(isTargeted ? "Release to strip metadata" : "Drop Image Here")
                         .font(.system(size: 12.5, weight: .semibold))
-                        .foregroundColor(.primary)
+                        .foregroundColor(isTargeted ? .accentColor : .primary)
 
                     // Keyboard Shortcut Hint
                     HStack(spacing: 4) {
@@ -65,10 +56,9 @@ struct DropZoneView: View {
                             .font(.system(size: 10.5))
                             .foregroundColor(.secondary)
 
-                        KeyCapView(key: "⌘")
-                        KeyCapView(key: "V")
+                        KeyCapView(key: "⌘V")
 
-                        Text("to paste")
+                        Text("to paste from clipboard")
                             .font(.system(size: 10.5))
                             .foregroundColor(.secondary)
                     }
@@ -81,47 +71,52 @@ struct DropZoneView: View {
                         FormatTag("EXIF")
                         Image(systemName: "arrow.right")
                             .font(.system(size: 7.5, weight: .bold))
-                            .foregroundColor(.secondary.opacity(0.7))
-                        FormatTag("PNG/JPG", isOutput: true)
+                            .foregroundColor(.secondary.opacity(0.6))
+                        FormatTag("PNG / JPG", isOutput: true)
                     }
                     .padding(.top, 2)
                 }
                 .padding(.vertical, 14)
                 .padding(.horizontal, 12)
             }
-            .frame(height: 140)
-            .onDrop(of: [.fileURL, .image, .data], isTargeted: $isTargeted) { providers in
+            .frame(height: 156)
+            .animation(.easeOut(duration: 0.15), value: isTargeted)
+            .onChange(of: isTargeted) { targeted in
+                if targeted {
+                    appState.triggerHaptic(.alignment)
+                }
+            }
+            .onDrop(of: [.fileURL, .image, .url, .data], isTargeted: $isTargeted) { providers in
                 handleDrop(providers: providers)
             }
 
-            // Quick Paste Button with crisp corners
+            // Quick Paste Button
             Button(action: {
                 appState.processFromClipboard()
             }) {
-                HStack(spacing: 6) {
+                HStack(spacing: 7) {
                     Image(systemName: "doc.on.clipboard")
-                        .font(.system(size: 11, weight: .semibold))
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundColor(.secondary)
                     Text("Paste from Clipboard")
-                        .font(.system(size: 11.5, weight: .semibold))
+                        .font(.system(size: 11.5, weight: .medium))
+                        .foregroundColor(.primary.opacity(0.9))
                     Spacer()
-                    HStack(spacing: 2) {
-                        KeyCapView(key: "⌘")
-                        KeyCapView(key: "V")
-                    }
+                    KeyCapView(key: "⌘V")
                 }
-                .padding(.horizontal, 10)
-                .padding(.vertical, 7)
+                .padding(.horizontal, 11)
+                .padding(.vertical, 7.5)
                 .background(
-                    RoundedRectangle(cornerRadius: 6, style: .continuous)
-                        .fill(Color.primary.opacity(0.05))
+                    RoundedRectangle(cornerRadius: 7, style: .continuous)
+                        .fill(Color.primary.opacity(0.04))
                         .overlay(
-                            RoundedRectangle(cornerRadius: 6, style: .continuous)
-                                .stroke(Color.primary.opacity(0.1), lineWidth: 1)
+                            RoundedRectangle(cornerRadius: 7, style: .continuous)
+                                .strokeBorder(Color.primary.opacity(0.09), lineWidth: 0.5)
                         )
                 )
+                .contentShape(Rectangle())
             }
-            .buttonStyle(.plain)
-            .keyboardShortcut("v", modifiers: .command)
+            .buttonStyle(TactileButtonStyle(cornerRadius: 7))
         }
     }
 
@@ -140,10 +135,22 @@ struct DropZoneView: View {
         }
 
         if provider.hasItemConformingToTypeIdentifier(UTType.image.identifier) {
+            let suggestedName = provider.suggestedName
             provider.loadDataRepresentation(forTypeIdentifier: UTType.image.identifier) { data, _ in
                 if let data = data {
                     Task { @MainActor in
-                        appState.processData(data, filename: "dragged_image")
+                        appState.processData(data, filename: suggestedName)
+                    }
+                }
+            }
+            return true
+        }
+
+        if provider.hasItemConformingToTypeIdentifier(UTType.url.identifier) {
+            _ = provider.loadObject(ofClass: URL.self) { url, _ in
+                if let url = url {
+                    Task { @MainActor in
+                        appState.processFile(at: url)
                     }
                 }
             }
@@ -159,16 +166,16 @@ struct KeyCapView: View {
 
     var body: some View {
         Text(key)
-            .font(.system(size: 9, weight: .bold, design: .rounded))
-            .foregroundColor(.primary.opacity(0.85))
-            .padding(.horizontal, 4.5)
+            .font(.system(size: 9.5, weight: .medium, design: .rounded))
+            .foregroundColor(.secondary)
+            .padding(.horizontal, 5)
             .padding(.vertical, 1.5)
             .background(
-                RoundedRectangle(cornerRadius: 3, style: .continuous)
-                    .fill(Color.primary.opacity(0.07))
+                RoundedRectangle(cornerRadius: 3.5, style: .continuous)
+                    .fill(Color.primary.opacity(0.06))
                     .overlay(
-                        RoundedRectangle(cornerRadius: 3, style: .continuous)
-                            .stroke(Color.primary.opacity(0.15), lineWidth: 0.5)
+                        RoundedRectangle(cornerRadius: 3.5, style: .continuous)
+                            .strokeBorder(Color.primary.opacity(0.12), lineWidth: 0.5)
                     )
             )
     }
@@ -186,12 +193,12 @@ struct FormatTag: View {
     var body: some View {
         Text(text)
             .font(.system(size: 8.5, weight: .semibold, design: .monospaced))
-            .padding(.horizontal, 4.5)
-            .padding(.vertical, 1.5)
+            .padding(.horizontal, 5)
+            .padding(.vertical, 2)
             .background(
-                RoundedRectangle(cornerRadius: 3, style: .continuous)
-                    .fill(isOutput ? Color.green.opacity(0.12) : Color.primary.opacity(0.05))
+                RoundedRectangle(cornerRadius: 3.5, style: .continuous)
+                    .fill(isOutput ? Color.accentColor.opacity(0.14) : Color.primary.opacity(0.05))
             )
-            .foregroundColor(isOutput ? .green : .secondary)
+            .foregroundColor(isOutput ? .accentColor : .secondary)
     }
 }

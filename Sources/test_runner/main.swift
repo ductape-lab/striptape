@@ -194,4 +194,47 @@ do {
     exit(1)
 }
 
-print("\n✨ All 3 tests passed! striptape is rock solid.\n")
+// TEST 4: EXIF Orientation baking and opaque RGBA detection
+do {
+    print("\n▶ Test 4: EXIF orientation normalization & opaque RGBA detection...")
+    let rawWidth = 120
+    let rawHeight = 80
+    let colorSpace = CGColorSpaceCreateDeviceRGB()
+    let bitmapInfo = CGBitmapInfo(rawValue: CGImageAlphaInfo.premultipliedLast.rawValue)
+
+    let context = CGContext(
+        data: nil,
+        width: rawWidth,
+        height: rawHeight,
+        bitsPerComponent: 8,
+        bytesPerRow: rawWidth * 4,
+        space: colorSpace,
+        bitmapInfo: bitmapInfo.rawValue
+    )!
+
+    context.setFillColor(CGColor(red: 0.9, green: 0.4, blue: 0.1, alpha: 1.0))
+    context.fill(CGRect(x: 0, y: 0, width: rawWidth, height: rawHeight))
+
+    let cgImage = context.makeImage()!
+    let data = NSMutableData()
+    let dest = CGImageDestinationCreateWithData(data as CFMutableData, UTType.jpeg.identifier as CFString, 1, nil)!
+    // Orientation 6 = 90° CW (portrait photo stored sideways)
+    let props: [CFString: Any] = [kCGImagePropertyOrientation: 6]
+    CGImageDestinationAddImage(dest, cgImage, props as CFDictionary)
+    CGImageDestinationFinalize(dest)
+
+    let result = try ImageProcessor.shared.process(
+        data: data as Data,
+        originalFilename: "portrait.jpg",
+        targetFormat: .auto
+    )
+
+    assertTest(result.stats.width == 80 && result.stats.height == 120, "Portrait orientation should be baked into pixel dimensions (80x120, got \(result.stats.width)x\(result.stats.height))")
+    assertTest(result.stats.targetFormat == "JPG", "Opaque JPEG in Auto mode should remain JPG")
+    print("   ✓ EXIF orientation baked into pixels (\(result.stats.width)×\(result.stats.height)) and opaque RGBA detected properly.")
+} catch {
+    print("❌ Test 4 failed: \(error)")
+    exit(1)
+}
+
+print("\n✨ All 4 tests passed! striptape is rock solid.\n")
